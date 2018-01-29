@@ -11,9 +11,21 @@
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+#include <vector>
+#include <cstring>
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
+
+const std::vector<const char*> validationLayers = {
+	"VK_LAYER_LUNARG_standard_validation"
+};
+
+#ifdef NDEBUG
+	const bool enableValidationLayers = false;
+#else
+	const bool enableValidationLayers = true;
+#endif
 
 class VulkanBase {
 public:
@@ -26,6 +38,9 @@ private:
 	void InitWindow();
 	void InitVulkan();
 	void CreateInstance();
+	bool checkValidationLayerSupport();
+
 	void MainLoop();
+
 	void Cleanup();
 };
