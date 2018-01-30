@@ -1,4 +1,17 @@
+#pragma once
+#include <GLFW/glfw3.h>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <vulkan/vulkan.h>
+
 #include "VulkanBase.hpp"
+#include "Callback.h"
+
+#include <iostream>
+#include <stdexcept>
+#include <functional>
+#include <vector>
+#include <cstring>
 
 void VulkanBase::Run() {
 	InitWindow();
@@ -9,7 +22,6 @@ void VulkanBase::Run() {
 
 void VulkanBase::InitWindow() {
 	std::cout << "InitWindow()" << std::endl;
-
 
 	glfwInit();
 
@@ -23,13 +35,13 @@ void VulkanBase::InitVulkan() {
 	std::cout << "InitVulkan()" << std::endl;
 
 	CreateInstance();
-
+	SetupDebugCallback();
 }
 
 void VulkanBase::CreateInstance() {
-	std::cout << "createInstance()" << std::endl;
+	std::cout << "CreateInstance()" << std::endl;
 
-	if (enableValidationLayers && !checkValidationLayerSupport()) {
+	if (enableValidationLayers && !CheckValidationLayerSupport()) {
 		throw std::runtime_error("validation layers requested, but not available!");
 	}
 
@@ -49,19 +61,15 @@ void VulkanBase::CreateInstance() {
 	createInfo.pApplicationInfo = &appInfo;
 	//createInfo.enabledLayerCount = 0;			//see below (Validation)
 	//createInfo.ppEnabledLayerNames = ;		//see below (Validation)
-	//createInfo.enabledExtensionCount = ;		//see below (Extensions)
-	//createInfo.ppEnabledExtensionNames = ;	//see below (Extensions)
+	//createInfo.enabledExtensionCount = ;		//see below (Extensions/Msg Callback)
+	//createInfo.ppEnabledExtensionNames = ;	//see below (Extensions/Msg Callback)
 
-	//---------------- EXTENSIONS ----------------
+	//---------------- EXTENSIONS / MESSAGE CALLBACK ----------------
 	//return the extensions we need to interface with the window system and pass to a struct
 
-	unsigned int glfwExtensionCount = 0;
-	const char** glfwExtensions;
-
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	createInfo.enabledExtensionCount = glfwExtensionCount;
-	createInfo.ppEnabledExtensionNames = glfwExtensions;
+	auto extensions = GetRequiredExtensions();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	createInfo.ppEnabledExtensionNames = extensions.data();
 
 	//---------------- VALIDATION ----------------
 	//checks if validation layers are enabled and edits the createInfo struct
@@ -80,7 +88,9 @@ void VulkanBase::CreateInstance() {
 		throw std::runtime_error("failed to create instance");
 }
 
-bool VulkanBase::checkValidationLayerSupport() {
+bool VulkanBase::CheckValidationLayerSupport() {
+	std::cout << "CheckValidationLayerSupport()" << std::endl;
+
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -102,6 +112,42 @@ bool VulkanBase::checkValidationLayerSupport() {
 	return true;
 }
 
+std::vector<const char*> VulkanBase::GetRequiredExtensions() {
+	//enabling relaying of debug messages back to our program
+	std::cout << "GetRequiredExtensions()" << std::endl;
+
+	std::vector<const char*> extensions;
+
+	unsigned int glfwExtensionCount = 0;
+	const char** glfwExtensions;
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	for (unsigned int i = 0; i < glfwExtensionCount; i++) {
+		extensions.push_back(glfwExtensions[i]);
+	}
+
+	if (enableValidationLayers) {
+		extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	}
+
+	return extensions;
+}
+
+void VulkanBase::SetupDebugCallback() {
+	std::cout << "SetupDebugCallback()" << std::endl;
+	if (!enableValidationLayers) return;
+
+	VkDebugReportCallbackCreateInfoEXT createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	createInfo.pfnCallback = debugCallback;
+
+	if (CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
+		throw std::runtime_error("failed to set up debug callback!");
+		std::cout << "   failed to set up debug callback!" << std::endl;
+	}
+}
+
 void VulkanBase::MainLoop() {
 	std::cout << "MainLoop()" << std::endl;
 
@@ -113,6 +159,8 @@ void VulkanBase::MainLoop() {
 void VulkanBase::Cleanup() {
 	std::cout << "Cleanup()" << std::endl;
 
+	DestroyDebugReportCallbackEXT(instance, callback, nullptr);
+	vkDestroyInstance(instance, nullptr);
 	glfwDestroyWindow(window);
 	glfwTerminate();
 }

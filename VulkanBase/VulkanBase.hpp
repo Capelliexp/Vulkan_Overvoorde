@@ -1,3 +1,4 @@
+#pragma once
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>	//Graphics Library Framework (manage windows, OpenGL contexts and input)
 
@@ -8,11 +9,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <iostream>
-#include <stdexcept>
-#include <functional>
 #include <vector>
-#include <cstring>
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -22,9 +19,9 @@ const std::vector<const char*> validationLayers = {
 };
 
 #ifdef NDEBUG
-	const bool enableValidationLayers = false;
+const bool enableValidationLayers = false;
 #else
-	const bool enableValidationLayers = true;
+const bool enableValidationLayers = true;
 #endif
 
 class VulkanBase {
@@ -34,11 +31,14 @@ public:
 private:
 	GLFWwindow * window;	//reference to the GLFW window
 	VkInstance instance;	//handler to the instance
+	VkDebugReportCallbackEXT callback;
 
 	void InitWindow();
 	void InitVulkan();
 	void CreateInstance();
-	bool checkValidationLayerSupport();
+	bool CheckValidationLayerSupport();
+	std::vector<const char*> GetRequiredExtensions();
+	void SetupDebugCallback();
 
 	void MainLoop();
 

@@ -13,5 +13,6 @@ int main() {
 		return EXIT_FAILURE;
 	}
 
+	getchar();
 	return EXIT_SUCCESS;
 }
